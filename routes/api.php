@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\DaftarBukuController;
+use App\Http\Controllers\Api\DasboardAdminController;
 use App\Http\Controllers\Api\DataArsipContoller;
 use App\Http\Controllers\Api\DataBukuContoller;
 use App\Http\Controllers\Api\DataDendaController;
@@ -22,3 +24,5 @@ Route::get('DataDenda', [DataDendaController::class, 'index']);
 Route::get('DataPeminjaman', [DataPeminjamanController::class, 'index']);
 Route::get('DataUser', [DataUserController::class, 'index']);
 Route::get('MediaBuku', [MediaBukuController::class, 'index']);
+Route::get('DasboardAdmin', [DasboardAdminController::class, 'index']);
+Route::get('DaftarBuku', [DaftarBukuController::class, 'index']);
