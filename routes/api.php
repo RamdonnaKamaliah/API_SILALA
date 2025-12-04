@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DaftarBukuController;
 use App\Http\Controllers\Api\DasboardAdminController;
 use App\Http\Controllers\Api\DataArsipContoller;
@@ -17,6 +18,16 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', function(Request $request) {
+        return $request->user();
+    });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
+
+Route::post('login', [AuthController::class,'login']); //manual login
+Route::post('/google/login', [AuthController::class,'googleLogin']); //Google login
 Route::get('kategori', [KategoriController::class, 'index']);
 Route::get('databuku', [DataBukuContoller::class, 'index']);
 Route::get('arsip', [DataArsipContoller::class, 'index']);
