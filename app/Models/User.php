@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -23,6 +23,12 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'membership_type',
+        'gender',
+        'google_id',
+        'google_token',
+        'google_refresh_token',
+        'password_setup',
     ];
 
     /**
@@ -46,6 +52,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function scopeKaryawan($query){
+        return $query->where('membersip_type', 'karyawan');
+    }
+
+    public function scopeMagang($query){
+        return $query->where('membership_type', 'magang');
+    }
+
+    public function getMemberTypeAttribute(){
+        $labels = [
+          'karyawan' => 'karyawan',
+          'magang' => 'Magang/PKL'  
+        ];
+        
+        return $labels[$this->membership_type] ?? 'Tidak diketahui';
     }
     
 }
