@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BukuFavoritController;
 use App\Http\Controllers\Api\DaftarBukuController;
 use App\Http\Controllers\Api\DasboardAdminController;
 use App\Http\Controllers\Api\DataArsipContoller;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\DataPeminjamanController;
 use App\Http\Controllers\Api\DataUserController;
 use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\Api\MediaBukuController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RiwayatBacaController;
 use Google\Service\ServiceControl\Auth;
 use Illuminate\Http\Request;
@@ -19,15 +21,6 @@ use Laravel\Mcp\Server\Resource;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
-
-//route melihat data user berdasarkan request
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function(Request $request) {
-        return $request->user();
-    });
-
-    Route::post('/logout', [AuthController::class, 'logout']);
-});
 
 //Register
 Route::post('register', [AuthController::class, 'register']);
@@ -48,3 +41,18 @@ Route::get('DataUser', [DataUserController::class, 'index']);
 Route::get('MediaBuku', [MediaBukuController::class, 'index']);
 Route::get('DasboardAdmin', [DasboardAdminController::class, 'index']);
 Route::get('DaftarBuku', [DaftarBukuController::class, 'index']);
+Route::get('profile', [ProfileController::class, 'index']);
+
+// route yang butuh token
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/user', function(Request $request) {
+        return $request->user();
+    });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::post('/favorite/toggle', [BukuFavoritController::class, 'toggle']);
+    Route::get('/favorite', [BukuFavoritController::class, 'apiIndex']);
+
+});
