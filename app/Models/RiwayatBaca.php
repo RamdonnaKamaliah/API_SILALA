@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class RiwayatBaca extends Model
 {
-     protected $table = 'riwayat_baca';
+    protected $table = 'riwayat_baca';
     protected $fillable = ['user_id', 'buku_id', 'terakhir_dibaca'];
 
     public function buku()
@@ -22,4 +22,5 @@ class RiwayatBaca extends Model
     protected $casts = [
     'terakhir_dibaca' => 'datetime',
 ];
+
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\DataUserController;
 use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\Api\MediaBukuController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RiwayatBacaController;
 use Google\Service\ServiceControl\Auth;
 use Illuminate\Http\Request;
@@ -54,5 +55,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/favorite/toggle', [BukuFavoritController::class, 'toggle']);
     Route::get('/favorite', [BukuFavoritController::class, 'apiIndex']);
+    Route::post('rating', [RatingController::class, 'store']);
+    Route::get('/rating/{bukuId}', [RatingController::class, 'getUserRating']);
+    Route::delete('/rating/{bukuId}', [RatingController::class, 'destroy']);
 
 });
