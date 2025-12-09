@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\MediaBukuController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RiwayatBacaController;
+use App\Http\Controllers\Api\RiwayatBukuController;
 use Google\Service\ServiceControl\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -69,5 +70,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/update', [EditProfilController::class, 'update']);
     Route::get('/dashboard', [DashboardUserController::class, 'index']);
     Route::get('/detail-buku/{id}', [DetailBukuController::class, 'detail']);
-
+    Route::prefix('riwayat-buku')->group(function () {
+        Route::get('/', [RiwayatBukuController::class, 'index']);
+        Route::get('/check-active', [RiwayatBukuController::class, 'checkActiveBorrow']);
+        Route::get('/check-book/{bookId}', [RiwayatBukuController::class, 'checkBookBorrowStatus']);
+        Route::post('/pinjam', [RiwayatBukuController::class, 'store']);
+        Route::put('/kembalikan/{id}', [RiwayatBukuController::class, 'kembalikanBuku']);
+        Route::post('/kembalikan-foto', [RiwayatBukuController::class, 'kembalikanBukuWithPhoto']);
+    });
 });

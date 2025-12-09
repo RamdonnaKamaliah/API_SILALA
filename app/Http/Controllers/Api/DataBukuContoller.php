@@ -14,9 +14,6 @@ class DataBukuContoller extends Controller
     public function index()
     {
         $data = databuku::orderBy('judul_buku')->get();
-
-       
-
         return response()->json([
             'status'=>true,
             'message'=>'data di temukan',
