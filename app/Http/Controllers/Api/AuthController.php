@@ -32,7 +32,9 @@ class AuthController extends Controller
             'message' => 'Login berhasil',
             'user' => $user,
             'token' => $token
-        ]);
+        ])->header('Access-Control-Allow-Origin', '*')
+      ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+      ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 
     // Login via Google OAuth

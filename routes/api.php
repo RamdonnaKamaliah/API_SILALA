@@ -4,12 +4,16 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BukuFavoritController;
 use App\Http\Controllers\Api\DaftarBukuController;
 use App\Http\Controllers\Api\DasboardAdminController;
+use App\Http\Controllers\Api\DashboardUserController;
 use App\Http\Controllers\Api\DataArsipContoller;
 use App\Http\Controllers\Api\DataBukuContoller;
 use App\Http\Controllers\Api\DataDendaController;
 use App\Http\Controllers\Api\DataPeminjamanController;
 use App\Http\Controllers\Api\DataUserController;
+use App\Http\Controllers\Api\DetailBukuController;
+use App\Http\Controllers\Api\EditProfilController;
 use App\Http\Controllers\Api\KategoriController;
+use App\Http\Controllers\Api\LandingController;
 use App\Http\Controllers\Api\MediaBukuController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RatingController;
@@ -18,6 +22,7 @@ use Google\Service\ServiceControl\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Mcp\Server\Resource;
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -42,11 +47,12 @@ Route::get('DataUser', [DataUserController::class, 'index']);
 Route::get('MediaBuku', [MediaBukuController::class, 'index']);
 Route::get('DasboardAdmin', [DasboardAdminController::class, 'index']);
 Route::get('DaftarBuku', [DaftarBukuController::class, 'index']);
-Route::get('profile', [ProfileController::class, 'index']);
+Route::get('landingPage', [LandingController::class, 'index']);
+
 
 // route yang butuh token
 Route::middleware('auth:sanctum')->group(function () {
-
+    
     Route::get('/user', function(Request $request) {
         return $request->user();
     });
@@ -58,5 +64,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('rating', [RatingController::class, 'store']);
     Route::get('/rating/{bukuId}', [RatingController::class, 'getUserRating']);
     Route::delete('/rating/{bukuId}', [RatingController::class, 'destroy']);
+    Route::get('/riwayat', [RiwayatBacaController::class, 'index']);
+    Route::get('/profile', [ProfileController::class, 'index']);
+    Route::post('/profile/update', [EditProfilController::class, 'update']);
+    Route::get('/dashboard', [DashboardUserController::class, 'index']);
+    Route::get('/detail-buku/{id}', [DetailBukuController::class, 'detail']);
 
 });
