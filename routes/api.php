@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\DaftarBukuController;
 use App\Http\Controllers\Api\DasboardAdminController;
 use App\Http\Controllers\Api\DashboardUserController;
 use App\Http\Controllers\Api\DataArsipContoller;
-use App\Http\Controllers\Api\DataBukuContoller;
+use App\Http\Controllers\Api\DataBukuController;
 use App\Http\Controllers\Api\DataDendaController;
 use App\Http\Controllers\Api\DataPeminjamanController;
 use App\Http\Controllers\Api\DataUserController;
@@ -40,7 +40,6 @@ Route::post('/google/login', [AuthController::class,'googleLogin']); //Google lo
 
 
 Route::get('kategori', [KategoriController::class, 'index']);
-Route::get('databuku', [DataBukuContoller::class, 'index']);
 Route::get('arsip', [DataArsipContoller::class, 'index']);
 Route::get('DataDenda', [DataDendaController::class, 'index']);
 Route::get('DataPeminjaman', [DataPeminjamanController::class, 'index']);
@@ -49,6 +48,8 @@ Route::get('MediaBuku', [MediaBukuController::class, 'index']);
 Route::get('DasboardAdmin', [DasboardAdminController::class, 'index']);
 Route::get('DaftarBuku', [DaftarBukuController::class, 'index']);
 Route::get('landingPage', [LandingController::class, 'index']);
+Route::get('dataBuku', [DataBukuController::class, 'index']);
+Route::post('buku', [DataBukuController::class, 'store']);
 
 
 // route yang butuh token
@@ -77,5 +78,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/pinjam', [RiwayatBukuController::class, 'store']);
         Route::put('/kembalikan/{id}', [RiwayatBukuController::class, 'kembalikanBuku']);
         Route::post('/kembalikan-foto', [RiwayatBukuController::class, 'kembalikanBukuWithPhoto']);
+        
     });
 });
