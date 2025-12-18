@@ -49,7 +49,14 @@ Route::get('DasboardAdmin', [DasboardAdminController::class, 'index']);
 Route::get('DaftarBuku', [DaftarBukuController::class, 'index']);
 Route::get('landingPage', [LandingController::class, 'index']);
 Route::get('dataBuku', [DataBukuController::class, 'index']);
-Route::post('buku', [DataBukuController::class, 'store']);
+Route::post('dataBuku', [DataBukuController::class, 'store']);
+Route::get('dataBuku/{id}', [DataBukuController::class, 'show']);
+Route::put('dataBuku/{id}', [DataBukuController::class, 'update']);
+Route::delete('dataBuku/{id}', [DataBukuController::class, 'destroy']);
+Route::post('dataBuku/bulk-delete', [DataBukuController::class, 'bulkDelete']);
+Route::post('dataBuku/bulk-archive', [DataBukuController::class, 'bulkArchive']);
+Route::post('dataBuku/{id}/restore', [DataBukuController::class, 'restore']);
+Route::post('dataBuku/import', [DataBukuController::class, 'import']);
 
 
 // route yang butuh token

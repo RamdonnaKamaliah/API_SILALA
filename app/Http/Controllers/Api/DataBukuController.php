@@ -245,28 +245,18 @@ class DataBukuController extends Controller
         ]);
     }
 
-    public function import(Request $request)
-    {
+   public function import(Request $request)
+{
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls|max:10240' // Max 10MB
+            'file' => 'required|mimes:xlsx,xls'
         ]);
 
         try {
-            $import = new DataBukuImport;
-            Excel::import($import, $request->file('file'));
-            
-            $summary = $import->getImportSummary();
-
-            $message = "Import selesai! Berhasil: {$summary['imported']}, Dilewati: {$summary['skipped']}";
+            Excel::import(new DataBukuImport, $request->file('file'));
 
             return response()->json([
                 'status' => true,
-                'message' => $message,
-                'data' => [
-                    'imported' => $summary['imported'],
-                    'skipped' => $summary['skipped'],
-                    'errors' => $summary['errors']
-                ]
+                'message' => 'Data buku berhasil diimpor!'
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -275,7 +265,7 @@ class DataBukuController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
+}
 
    public function bulkArchive(Request $request)
     {
@@ -300,4 +290,49 @@ class DataBukuController extends Controller
             ], 500);
         }
     }
+
+    public function bulkDelete( Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:data_bukus,id'
+        ]);
+
+        try {
+            DataBuku::whereIn('id', $request->ids)->delete();
+
+            return response()->json([
+                'status' => true,
+                'message' => count($request->ids) . ' buku berhasil dihapus'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal menghapus buku',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function restore($id) {
+        try {
+            $buku = DataBuku::withTrashed()->findOrFail($id);
+            $buku->restore();
+
+            $buku->status = 'aktif';
+            $buku->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Buku berhasil dipulihkan',
+                'data' => $buku
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Buku Gagal dipulihkan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    } 
 }

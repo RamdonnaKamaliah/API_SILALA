@@ -1,366 +1,128 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Imports;
 
-use App\Http\Controllers\Controller;
 use App\Models\DataBuku;
+use App\Models\DataKategori;
 use App\Models\GambarBuku;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\DataBukuImport;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithStartRow;
 
-
-class DataBukuController extends Controller
+class DataBukuImport implements ToModel, WithStartRow
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function startRow(): int
     {
-        try {
-            $data = DataBuku::with('kategoris')
-                ->where('status', '!=', 'arsip')
-                ->orderBy('judul_buku')
-                ->get();
-                
-            return response()->json([
-                'status' => true,
-                'message' => 'Data ditemukan',
-                'data' => $data
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal mengambil data',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return 2; // Mulai baris ke-2
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function model(array $row)
     {
-        $validated = $request->validate([
-            'foto_buku' => 'required|image|mimes:png,jpg,jpeg|max:2048',
-            'foto_id'   => 'nullable|exists:gambar_bukus,id',
-            'judul_buku' => 'required|string|max:255',
-            'penulis' => 'required|string|max:255',
-            'penerbit' => 'required|string|max:255',
-            'tahun_terbit' => 'required|digits:4|integer',
-            'bahasa' => 'required|string|max:100',
-            'kategori_id' => 'required|array|min:1',
-            'kategori_id.*' => 'exists:data_kategoris,id',
-            'jumlah_halaman' => 'required|integer|min:1',
-            'edisi' => 'required|string|max:100',
-            'deskripsi' => 'required|string',
-            'stok' => 'required|integer|min:0',
-            'file_buku' => 'required|mimes:pdf|max:5120',
+        // 1. Import FOTO dari Google Drive
+        // ===============================
+        $fotoUrl = $row[10];
+        $localFotoPath = null;
+
+        if ($fotoUrl && str_contains($fotoUrl, 'drive.google.com')) {
+
+            $fileId = null;
+            if (preg_match('/\/d\/([a-zA-Z0-9_-]+)/', $fotoUrl, $m)) $fileId = $m[1];
+            if (preg_match('/id=([a-zA-Z0-9_-]+)/', $fotoUrl, $m)) $fileId = $m[1];
+
+            if ($fileId) {
+                $direct = "https://drive.google.com/uc?export=download&id={$fileId}";
+
+                try {
+                    $response = Http::get($direct);
+
+                    if ($response->ok()) {
+
+                         $lastId = (GambarBuku::max('id') ?? 0) + 1;
+                        $fileName = 'gambar-' . $lastId . '.jpg';
+                        $path = "uploads/buku/{$fileName}";
+
+                        Storage::disk('public')->put($path, $response->body());
+                        $localFotoPath = $path;
+
+                        // SIMPAN ke tabel gambar_bukus
+                        GambarBuku::create([
+                            // 'data_buku' =>$buku->id,
+                            'nama_file' => $fileName,
+                            'path_file' => $path,
+                            
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // Abaikan error
+                }
+            }
+        }
+
+        // ===============================
+        // 2. Import FILE PDF Google Drive
+        // ===============================
+        $pdfUrl = $row[11];
+        $localPdfPath = null;
+
+        if ($pdfUrl && str_contains($pdfUrl, 'drive.google.com')) {
+
+            // Ambil ID otomatis
+            preg_match('/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/', $pdfUrl, $match);
+            $fileId = $match[1] ?? null;
+
+            if ($fileId) {
+
+                $direct = "https://drive.google.com/uc?export=download&id={$fileId}";
+
+                try {
+                    $response = Http::withOptions(['allow_redirects' => true])
+                        ->get($direct);
+
+                    // Simpan langsung tanpa cek content-type
+                    if ($response->ok() && $response->body()) {
+
+                        $fileName = time() . '_' . uniqid() . '.pdf';
+                        $path = "uploads/file_buku/{$fileName}";
+
+                        Storage::disk('public')->put($path, $response->body());
+
+                        $localPdfPath = $path;
+                    }
+                } catch (\Exception $e) {
+                    $localPdfPath = null;
+                }
+            }
+        }
+
+
+        // ===============================
+        // 3. Simpan Data Buku
+        // ===============================
+        $buku = DataBuku::create([
+            'judul_buku'     => $row[0],
+            'penulis'        => $row[1],
+            'penerbit'       => $row[2],
+            'tahun_terbit'   => (int) $row[3],
+            'bahasa'         => $row[4],
+            'jumlah_halaman' => (int) $row[6],
+            'edisi'          => $row[7],
+            'stok'           => (int) $row[8],
+            'deskripsi'      => $row[9],
+            'foto_buku'      => $localFotoPath,
+            'file_buku'      => $localPdfPath,
         ]);
 
-        try {
-            $foto_buku_path = null;
 
-            // 1️⃣ Upload manual
-            if ($request->hasFile('foto_buku')) {
-                $file = $request->file('foto_buku');
-                $path = $file->store('uploads/buku', 'public');  
-                $foto_buku_path = $path;
-
-                // Simpan ke tabel media
-                GambarBuku::create([
-                    'nama_file' => $file->getClientOriginalName(),
-                    'path_file' => $path,
-                ]);
-            }
-
-            // 2️⃣ Pilih dari galeri (jika ada foto_id)
-            if ($request->foto_id && !$foto_buku_path) {
-                $media = GambarBuku::find($request->foto_id);
-                if ($media) {
-                    $foto_buku_path = $media->path_file;
-                }
-            }
-
-            // 3️⃣ Upload file buku (PDF)
-            $file_buku_path = null;
-            if ($request->hasFile('file_buku')) {
-                $file_buku_path = $request->file('file_buku')->store('uploads/file_buku', 'public');
-            }
-
-            // 4️⃣ Simpan data buku
-            $buku = DataBuku::create([
-                'judul_buku' => $request->judul_buku,
-                'penulis' => $request->penulis,
-                'penerbit' => $request->penerbit,
-                'tahun_terbit' => $request->tahun_terbit,
-                'bahasa' => $request->bahasa,
-                'jumlah_halaman' => $request->jumlah_halaman,
-                'edisi' => $request->edisi,
-                'deskripsi' => $request->deskripsi,
-                'stok' => $request->stok,
-                'foto_buku' => $foto_buku_path,
-                'file_buku' => $file_buku_path,
-                'kategori_ids' => implode(',', $request->kategori_id),
-                'status' => 'aktif'
-            ]);
-
-            // 5️⃣ Attach kategori (many-to-many)
-            $buku->kategoris()->attach($request->kategori_id);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Data buku berhasil disimpan!',
-                'data' => $buku->load('kategoris')
-            ], 201);
-
-        } catch (\Exception $e) {
-            // Hapus file jika ada error
-            if (isset($foto_buku_path)) {
-                Storage::disk('public')->delete($foto_buku_path);
-            }
-            if (isset($file_buku_path)) {
-                Storage::disk('public')->delete($file_buku_path);
-            }
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal menyimpan data buku',
-                'error' => $e->getMessage()
-            ], 500);
+        // ===============================
+        // 4. Hubungkan Kategori
+        // ===============================
+        $kategoriNama = trim($row[5]);
+        if ($kategoriNama) {
+            $kategori = DataKategori::firstOrCreate(['nama_kategori' => $kategoriNama]);
+            $buku->kategoris()->attach($kategori->id);
         }
+
+        return $buku;
     }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        try {
-            $buku = DataBuku::with('kategoris')->findOrFail($id);
-            
-            return response()->json([
-                'status' => true,
-                'message' => 'Data ditemukan',
-                'data' => $buku
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Buku tidak ditemukan',
-                'error' => $e->getMessage()
-            ], 404);
-        }
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        $validated = $request->validate([
-            'foto_buku' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
-            'judul_buku' => 'required|string|max:255',
-            'penulis' => 'required|string|max:255',
-            'penerbit' => 'required|string|max:255',
-            'tahun_terbit' => 'required|digits:4|integer',
-            'bahasa' => 'required|string|max:100',
-            'kategori_id' => 'required|array',
-            'kategori_id.*' => 'exists:data_kategoris,id',
-            'jumlah_halaman' => 'required|integer|min:1',
-            'edisi' => 'required|string|max:100',
-            'deskripsi' => 'required|string',
-            'stok' => 'required|integer|min:0',
-            'file_buku' => 'nullable|mimes:pdf|max:5120',
-        ]);
-
-        try {
-            $buku = DataBuku::findOrFail($id);
-            $oldFoto = $buku->foto_buku;
-            $oldFile = $buku->file_buku;
-
-            // Update foto jika ada file baru
-            if ($request->hasFile('foto_buku')) {
-                // Hapus foto lama
-                if ($oldFoto && Storage::disk('public')->exists($oldFoto)) {
-                    Storage::disk('public')->delete($oldFoto);
-                }
-                
-                $foto_path = $request->file('foto_buku')->store('uploads/buku', 'public');
-                $buku->foto_buku = $foto_path;
-            }
-
-            // Update file buku jika ada file baru
-            if ($request->hasFile('file_buku')) {
-                // Hapus file lama
-                if ($oldFile && Storage::disk('public')->exists($oldFile)) {
-                    Storage::disk('public')->delete($oldFile);
-                }
-                
-                $file_path = $request->file('file_buku')->store('uploads/file_buku', 'public');
-                $buku->file_buku = $file_path;
-            }
-
-            // Update field lainnya
-            $buku->judul_buku = $request->judul_buku;
-            $buku->penulis = $request->penulis;
-            $buku->penerbit = $request->penerbit;
-            $buku->tahun_terbit = $request->tahun_terbit;
-            $buku->bahasa = $request->bahasa;
-            $buku->jumlah_halaman = $request->jumlah_halaman;
-            $buku->edisi = $request->edisi;
-            $buku->deskripsi = $request->deskripsi;
-            $buku->stok = $request->stok;
-            $buku->kategori_ids = implode(',', $request->kategori_id);
-            $buku->save();
-
-            // Update pivot kategori
-            $buku->kategoris()->sync($request->kategori_id);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Data buku berhasil diperbarui!',
-                'data' => $buku->load('kategoris')
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal memperbarui data buku',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        try {
-            $buku = DataBuku::findOrFail($id);
-            
-            // Hapus file
-            if ($buku->foto_buku && Storage::disk('public')->exists($buku->foto_buku)) {
-                Storage::disk('public')->delete($buku->foto_buku);
-            }
-            if ($buku->file_buku && Storage::disk('public')->exists($buku->file_buku)) {
-                Storage::disk('public')->delete($buku->file_buku);
-            }
-            
-            // Hapus relasi kategori
-            $buku->kategoris()->detach();
-            
-            // Hapus buku
-            $buku->delete();
-            
-            return response()->json([
-                'status' => true,
-                'message' => 'Data buku berhasil dihapus!',
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal menghapus buku',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Bulk delete books
-     */
-    public function bulkDelete(Request $request)
-    {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'exists:data_bukus,id'
-        ]);
-
-        try {
-            $books = DataBuku::whereIn('id', $request->ids)->get();
-            
-            foreach ($books as $book) {
-                // Hapus file
-                if ($book->foto_buku && Storage::disk('public')->exists($book->foto_buku)) {
-                    Storage::disk('public')->delete($book->foto_buku);
-                }
-                if ($book->file_buku && Storage::disk('public')->exists($book->file_buku)) {
-                    Storage::disk('public')->delete($book->file_buku);
-                }
-                
-                // Hapus relasi
-                $book->kategoris()->detach();
-                $book->delete();
-            }
-
-            return response()->json([
-                'status' => true,
-                'message' => count($request->ids) . ' buku berhasil dihapus'
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal menghapus buku',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Bulk archive books
-     */
-    public function bulkArchive(Request $request)
-    {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'exists:data_bukus,id'
-        ]);
-
-        try {
-            DataBuku::whereIn('id', $request->ids)
-                ->update(['status' => 'arsip']);
-
-            return response()->json([
-                'status' => true,
-                'message' => count($request->ids) . ' buku berhasil diarsipkan'
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal mengarsipkan buku',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Restore book from archive
-     */
-    public function restore($id)
-    {
-        try {
-            $buku = DataBuku::findOrFail($id);
-            $buku->status = 'aktif';
-            $buku->save();
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Buku berhasil dipulihkan'
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal memulihkan buku',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Import books from Excel
-     */
-  
 }
