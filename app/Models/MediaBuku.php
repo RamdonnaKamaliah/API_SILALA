@@ -15,7 +15,7 @@ class MediaBuku extends Model
     ];
     public function buku()
 {
-    return $this->belongsTo(DataBuku::class, 'data_buku_id');
+    return $this->belongsTo(databuku::class, 'data_buku_id');
 }
 
 }

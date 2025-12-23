@@ -80,7 +80,7 @@ class DataPeminjaman extends Model
 
     public function buku()
     {
-        return $this->belongsTo(DataBuku::class, 'buku_id');
+        return $this->belongsTo(databuku::class, 'buku_id');
     }
 
     public function user()

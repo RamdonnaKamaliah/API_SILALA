@@ -25,7 +25,6 @@ class DaftarBukuController extends Controller
             'data_bukus' => $data_bukus,
             'data_kategori' => $data_kategori,
         ]);
-
     }
 
     /**
@@ -33,7 +32,7 @@ class DaftarBukuController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validasi input
     }
 
     /**

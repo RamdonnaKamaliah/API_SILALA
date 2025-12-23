@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BukuFavorit;
-use App\Models\DataBuku;
+use App\Models\databuku;
 use App\Models\DataPeminjaman;
 use App\Models\RiwayatBaca;
 use App\Models\Rating;
@@ -15,7 +15,7 @@ class DetailBukuController extends Controller
 {
     public function detail($id)
     {
-        $buku = DataBuku::find($id);
+        $buku = databuku::find($id);
 
         if (!$buku) {
             return response()->json([
